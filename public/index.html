@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mongo TV</title>
+  <meta name="description" content="Real-time MongoDB change stream viewer with a modern quirky aesthetic">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Monoton&family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <div class="scanlines"></div>
+  <div class="noise"></div>
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <h2>Collections</h2>
+      <button class="sidebar-close" id="sidebarClose" title="Close">
+        <svg viewBox="0 0 24 24">
+          <line x1="18" y1="6" x2="6" y2="18" />
+          <line x1="6" y1="6" x2="18" y2="18" />
+        </svg>
+      </button>
+    </div>
+    <div class="sidebar-content" id="sidebarContent">
+      <div class="sidebar-loading">Loading databases...</div>
+    </div>
+  </aside>
+
+  <!-- Sidebar overlay -->
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <!-- Detail Modal -->
+  <div class="modal-overlay" id="detailModal">
+    <div class="modal-wrapper">
+      <div class="modal-header">
+        <h3 id="modalTitle">Document Details</h3>
+        <button class="modal-close" id="modalClose">
+          <svg viewBox="0 0 24 24">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body" id="modalBody">
+        <!-- Content injected here -->
+      </div>
+    </div>
+  </div>
+
+  <div class="tv-container">
+    <header class="tv-header">
+      <h1 class="logo">
+        <span class="logo-text">MongoTV</span>
+      </h1>
+      <div class="controls">
+        <div class="status-indicator" id="status">
+          <span class="status-dot"></span>
+          <span class="status-text">Connecting...</span>
+        </div>
+        <button class="btn" id="pauseBtn" title="Pause/Resume">
+          <svg id="pauseIcon" viewBox="0 0 24 24">
+            <rect x="6" y="4" width="4" height="16" />
+            <rect x="14" y="4" width="4" height="16" />
+          </svg>
+        </button>
+        <button class="btn" id="clearBtn" title="Clear Screen">
+          <svg viewBox="0 0 24 24">
+            <polyline points="3 6 5 6 21 6" />
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+          </svg>
+        </button>
+
+
+        <button class="btn" id="soundBtn" title="Toggle Sound">
+          <svg id="soundIcon" viewBox="0 0 24 24">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+            <line x1="23" y1="9" x2="17" y2="15" />
+            <line x1="17" y1="9" x2="23" y2="15" />
+          </svg>
+        </button>
+        <button class="btn sidebar-toggle" id="sidebarToggle" title="Browse Collections">
+          <svg viewBox="0 0 24 24">
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+          </svg>
+        </button>
+      </div>
+    </header>
+
+
+
+    <main class="tv-screen" id="screen">
+      <div class="welcome-message" id="welcome">
+        <div class="tv-static"></div>
+        <p>Waiting for documents...</p>
+        <p class="hint">Insert, update, or delete something in your MongoDB!</p>
+      </div>
+    </main>
+
+    <footer class="tv-footer">
+      <div class="stats">
+        <span id="docCount">0</span> documents received
+
+        <span class="watching-separator">|</span>
+        <span class="watching-info">
+          <span class="watching-label">Watching:</span>
+          <span class="watching-target" id="watchingTarget">...</span>
+        </span>
+      </div>
+      <div class="footer-controls">
+        <button class="btn-small" id="zoomOutBtn" title="Decrease Font Size">
+          <svg viewBox="0 0 24 24">
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+        </button>
+        <button class="btn-small" id="zoomInBtn" title="Increase Font Size">
+          <svg viewBox="0 0 24 24">
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+        </button>
+        <button class="btn-small" id="layoutToggleBtn" title="Toggle Layout (List/Grid)"
+          style="min-width: 40px; font-weight: 600; font-size: 0.75rem;">LIST</button>
+        <button class="btn-small" id="viewToggleBtn" title="Toggle View Mode"
+          style="min-width: 40px; font-weight: 600; font-size: 0.75rem;">YAML</button>
+        <button class="btn-small" id="hideErrorsBtn" title="Hide/Show Errors">
+          <svg id="hideErrorsIcon" viewBox="0 0 24 24">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+            <line x1="12" y1="9" x2="12" y2="13" />
+            <line x1="12" y1="17" x2="12.01" y2="17" />
+          </svg>
+        </button>
+        <button class="btn-small" id="darkModeBtn" title="Toggle Dark/Light Mode">
+          <svg id="darkModeIcon" viewBox="0 0 24 24">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+          </svg>
+        </button>
+        <button class="btn-small" id="randomColorBtn" title="Randomize Colors">
+          <svg viewBox="0 0 24 24">
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <circle cx="8" cy="8" r="1.5" fill="currentColor" />
+            <circle cx="16" cy="8" r="1.5" fill="currentColor" />
+            <circle cx="8" cy="16" r="1.5" fill="currentColor" />
+            <circle cx="16" cy="16" r="1.5" fill="currentColor" />
+            <circle cx="12" cy="12" r="1.5" fill="currentColor" />
+          </svg>
+        </button>
+      </div>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+
+</html>

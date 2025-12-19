@@ -1,0 +1,17 @@
+{
+  "name": "mongo-tv",
+  "version": "1.0.0",
+  "description": "📺 Real-time MongoDB change stream viewer with a retro TV aesthetic",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.3",
+    "express": "^4.18.2",
+    "js-yaml": "^4.1.0",
+    "mongodb": "^6.3.0",
+    "ws": "^8.14.2"
+  }
+}

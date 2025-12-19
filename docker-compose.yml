@@ -1,0 +1,12 @@
+services:
+  mongo-tv:
+    build: .
+    container_name: mongo-tv
+    ports:
+      - "3000:3000"
+    environment:
+      - MONGODB_URI=${MONGODB_URI}
+      - MONGODB_DATABASE=${MONGODB_DATABASE:-}
+      - MONGODB_COLLECTION=${MONGODB_COLLECTION:-}
+      - PORT=3000
+    restart: unless-stopped
