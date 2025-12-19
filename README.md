@@ -1,6 +1,8 @@
 # Mongo TV
 
 Real-time MongoDB change stream viewer with a modern web interface.
+<img width="939" height="771" alt="image" src="https://github.com/user-attachments/assets/3ec0f04f-f80f-4f34-9d24-379a05b19efb" />
+
 
 ## Overview
 
