@@ -6,35 +6,74 @@ const { MongoClient } = require('mongodb');
 const yaml = require('js-yaml');
 const path = require('path');
 
-// Configuration from environment
+// ==========================================
+// Configuration
+// ==========================================
+
+/**
+ * Port for the Express server to listen on.
+ * Defaults to 3000.
+ */
 const PORT = process.env.PORT || 3000;
+
+/**
+ * MongoDB Connection URI.
+ * Must point to a MongoDB Replica Set for change streams to function.
+ */
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/?replicaSet=rs0';
+
+/** Optional: Limit watching to a specific database */
 const MONGODB_DATABASE = process.env.MONGODB_DATABASE || '';
+
+/** Optional: Limit watching to a specific collection */
 const MONGODB_COLLECTION = process.env.MONGODB_COLLECTION || '';
+
+/** Default format for client view (yaml or json) */
 const DEFAULT_CONTENT_FORMAT = process.env.DEFAULT_CONTENT_FORMAT || 'yaml';
+
+/** Default layout mode (list or grid) */
 const DEFAULT_LAYOUT_MODE = process.env.DEFAULT_LAYOUT_MODE || 'list';
+
+/**
+ * List of collections to exclude from the API results.
+ * Useful for hiding system collections or high-volume logs.
+ */
 const EXCLUDED_COLLECTIONS = process.env.EXCLUDED_COLLECTIONS ? process.env.EXCLUDED_COLLECTIONS.split(',').map(s => s.trim()) : [];
 
-// Express app setup
+// ==========================================
+// Server Setup
+// ==========================================
+
 const app = express();
 const server = http.createServer(app);
 
-// Serve static files
+// Serve static assets from public directory
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 
-// WebSocket server
+// Initialize WebSocket Server
 const wss = new WebSocket.Server({ server });
 
-// Track connected clients
+/** Set of active WebSocket clients */
 const clients = new Set();
 
-// MongoDB client (global for reuse)
+/** Global MongoDB Client instance */
 let mongoClient = null;
+
+/** Active Change Stream cursor */
 let currentChangeStream = null;
+
+/** Description of the current watch target (for UI display) */
 let currentWatchDescription = '';
 
-// Broadcast to all connected clients
+// ==========================================
+// Helper Functions
+// ==========================================
+
+/**
+ * Broadcasts a data object to all connected WebSocket clients.
+ * @param {Object} data - The payload to send.
+ */
 function broadcast(data) {
   const message = JSON.stringify(data);
   clients.forEach(client => {
@@ -44,7 +83,11 @@ function broadcast(data) {
   });
 }
 
-// Convert MongoDB change event to friendly format
+/**
+ * Formats a raw MongoDB change event into a cleaner structure for the client.
+ * @param {Object} change - The raw change stream event.
+ * @returns {Object} A formatted event object.
+ */
 function formatChangeEvent(change) {
   const operationMap = {
     'insert': 'INSERT',
@@ -75,7 +118,11 @@ function formatChangeEvent(change) {
   return formatted;
 }
 
-// Clean object for YAML display (unwrap BSON types)
+/**
+ * Prepares an object for YAML display by handling BSON types.
+ * @param {Object} obj - The object to clean.
+ * @returns {Object} The cleaned object.
+ */
 function cleanForYaml(obj) {
   if (!obj) return obj;
 
@@ -89,10 +136,12 @@ function cleanForYaml(obj) {
     return obj.toString();
   }
 
+  // Recursive array handling
   if (Array.isArray(obj)) {
     return obj.map(cleanForYaml);
   }
 
+  // Recursive object handling
   if (typeof obj === 'object' && !(obj instanceof Date) && !Buffer.isBuffer(obj)) {
     const newObj = {};
     for (const key in obj) {
@@ -104,7 +153,11 @@ function cleanForYaml(obj) {
   return obj;
 }
 
-// Convert to YAML
+/**
+ * Converts an object to a YAML string.
+ * @param {Object} obj - The object to convert.
+ * @returns {string} The YAML string.
+ */
 function toYaml(obj) {
   return yaml.dump(cleanForYaml(obj), {
     indent: 2,
@@ -114,7 +167,14 @@ function toYaml(obj) {
   });
 }
 
-// API: Get list of databases
+// ==========================================
+// API Endpoints
+// ==========================================
+
+/**
+ * GET /api/databases
+ * Returns a list of available databases (excluding system dbs).
+ */
 app.get('/api/databases', async (req, res) => {
   try {
     if (!mongoClient) {
@@ -132,7 +192,11 @@ app.get('/api/databases', async (req, res) => {
   }
 });
 
-// API: Get collections in a database
+/**
+ * GET /api/collections/:db
+ * Returns a list of collections in the specified database.
+ * Filters out collections defined in EXCLUDED_COLLECTIONS.
+ */
 app.get('/api/collections/:db', async (req, res) => {
   try {
     if (!mongoClient) {
@@ -154,7 +218,10 @@ app.get('/api/collections/:db', async (req, res) => {
   }
 });
 
-// API: Get current config
+/**
+ * GET /api/config
+ * Returns public configuration settings for the client.
+ */
 app.get('/api/config', (req, res) => {
   res.json({
     hasFixedCollection: !!(MONGODB_DATABASE && MONGODB_COLLECTION),
@@ -165,8 +232,16 @@ app.get('/api/config', (req, res) => {
   });
 });
 
+// ==========================================
+// Core Logic
+// ==========================================
 
-// Start watching a specific target
+/**
+ * Starts watching a target (Collection, Database, or Deployment).
+ * Closes the existing stream if one exists.
+ * @param {string} [database] - Database name (optional).
+ * @param {string} [collection] - Collection name (optional). ' *' for db watch.
+ */
 async function startWatching(database, collection) {
   // Close existing change stream
   if (currentChangeStream) {
@@ -210,9 +285,8 @@ async function startWatching(database, collection) {
 
   // Listen for changes
   currentChangeStream.on('change', (change) => {
-    console.log(`${change.operationType}: ${change.ns?.coll || 'unknown'}`);
-
     const formatted = formatChangeEvent(change);
+
     // Determine what to show in the YAML view (payload only)
     let payload = {};
     if (formatted.document) {
@@ -245,9 +319,13 @@ async function startWatching(database, collection) {
   });
 }
 
-// MongoDB connection and initial watch setup
+/**
+ * Initializes MongoDB connection and starts the default watch.
+ * Retries on failure.
+ */
 async function connectMongoDB() {
   console.log('Mongo TV Starting...');
+  // Log URI with masked credentials security
   console.log(`Connecting to MongoDB: ${MONGODB_URI.replace(/\/\/[^:]+:[^@]+@/, '//***:***@')}`);
 
   mongoClient = new MongoClient(MONGODB_URI, { family: 4 });
@@ -259,7 +337,7 @@ async function connectMongoDB() {
     // Start watching based on env config
     await startWatching(MONGODB_DATABASE, MONGODB_COLLECTION);
 
-    // Handle process termination
+    // Handle process termination gracefully
     process.on('SIGINT', async () => {
       console.log('\nShutting down...');
       if (currentChangeStream) await currentChangeStream.close();
@@ -279,13 +357,14 @@ async function connectMongoDB() {
   }
 }
 
-// WebSocket connection handler
+// ==========================================
+// WebSocket Handlers
+// ==========================================
+
 wss.on('connection', (ws) => {
-  console.log('Client connected');
   clients.add(ws);
 
   ws.on('close', () => {
-    console.log('Client disconnected');
     clients.delete(ws);
   });
 
@@ -298,8 +377,9 @@ wss.on('connection', (ws) => {
     try {
       const data = JSON.parse(message);
 
+      // Handle client requests (e.g., switching collections)
       if (data.type === 'selectCollection') {
-        // Only allow if not fixed by env
+        // Prevent switching if environment variables lock the target
         if (MONGODB_DATABASE && MONGODB_COLLECTION) {
           ws.send(JSON.stringify({
             type: 'error',
@@ -315,13 +395,12 @@ wss.on('connection', (ws) => {
     }
   });
 
-  // Send welcome message and current status
+  // Send initial state to new client
   ws.send(JSON.stringify({
     type: 'welcome',
-    message: 'Welcome to Mongo TV!'
+    message: 'Welcome to Mongo TV'
   }));
 
-  // Send current watching status
   if (currentWatchDescription) {
     ws.send(JSON.stringify({
       type: 'status',
@@ -331,7 +410,10 @@ wss.on('connection', (ws) => {
   }
 });
 
-// Start server
+// ==========================================
+// Start Server
+// ==========================================
+
 server.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
   connectMongoDB();

@@ -61,10 +61,7 @@
         <span class="logo-text">MongoTV</span>
       </h1>
       <div class="controls">
-        <div class="status-indicator" id="status">
-          <span class="status-dot"></span>
-          <span class="status-text">Connecting...</span>
-        </div>
+
         <button class="btn" id="pauseBtn" title="Pause/Resume">
           <svg id="pauseIcon" viewBox="0 0 24 24">
             <rect x="6" y="4" width="4" height="16" />
@@ -109,6 +106,12 @@
     <footer class="tv-footer">
       <div class="stats">
         <span id="docCount">0</span> documents received
+
+        <span class="watching-separator">|</span>
+        <div class="status-indicator" id="status" style="display: inline-flex; margin-right: 12px;">
+          <span class="status-dot"></span>
+          <span class="status-text">Connecting...</span>
+        </div>
 
         <span class="watching-separator">|</span>
         <span class="watching-info">

@@ -1,11 +1,17 @@
 /**
  * Mongo TV - Client-side Application
- * Real-time MongoDB change stream viewer
+ * Real-time MongoDB change stream viewer.
+ * Handles WebSocket connection, UI rendering, and user interactions.
  */
 
 class MongoTV {
+    /**
+     * Initialize application state and bind DOM elements.
+     */
     constructor() {
-        // State
+        // ==========================================
+        // Application State
+        // ==========================================
         this.ws = null;
         this.isPaused = false;
         this.soundEnabled = false;
@@ -15,7 +21,9 @@ class MongoTV {
         this.currentDatabase = null;
         this.currentCollection = null;
 
+        // ==========================================
         // DOM Elements
+        // ==========================================
         this.screen = document.getElementById('screen');
         this.status = document.getElementById('status');
         this.statusText = this.status.querySelector('.status-text');
@@ -46,15 +54,18 @@ class MongoTV {
         this.viewToggleBtn = document.getElementById('viewToggleBtn');
         this.layoutToggleBtn = document.getElementById('layoutToggleBtn');
 
-        // View mode state
-        // View mode state
-        this.viewMode = localStorage.getItem('viewMode'); // Wait for config if null
+        // ==========================================
+        // Preferences & Persistence
+        // ==========================================
+
+        // View mode state (YAML vs JSON)
+        this.viewMode = localStorage.getItem('viewMode');
         if (this.viewMode) {
             document.body.dataset.viewMode = this.viewMode;
             if (this.viewToggleBtn) this.viewToggleBtn.textContent = this.viewMode.toUpperCase();
         }
 
-        // Layout mode state
+        // Layout mode state (List vs Grid)
         this.layoutMode = localStorage.getItem('layoutMode');
         if (this.layoutMode) {
             document.body.classList.toggle('layout-grid', this.layoutMode === 'grid');
@@ -77,22 +88,20 @@ class MongoTV {
         // Hide errors state
         this.hideErrors = localStorage.getItem('hideErrors') === 'true';
 
-        // SVG icons for dark/light mode
+        // SVG Assets (inline for performance)
         this.moonSvg = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />';
         this.sunSvg = '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
 
-        // SVG icons for pause/play
         this.pauseSvg = '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>';
         this.playSvg = '<polygon points="5 3 19 12 5 21 5 3"/>';
 
-        // SVG icons for sound muted/unmuted
         this.mutedSvg = '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>';
         this.unmutedSvg = '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>';
 
         // Audio context for sound effects
         this.audioContext = null;
 
-        // History state
+        // History state (Last 50 items)
         this.history = [];
         this.MAX_HISTORY = 50;
 
@@ -103,6 +112,10 @@ class MongoTV {
         this.connect();
     }
 
+    /**
+     * Fetches configuration from the server API.
+     * Applies defaults, app title, and handles fixed collection modes.
+     */
     async checkConfig() {
         try {
             const response = await fetch('/api/config');
@@ -149,6 +162,9 @@ class MongoTV {
         }
     }
 
+    /**
+     * Binds all DOM event listeners for buttons and interactions.
+     */
     bindEvents() {
         this.pauseBtn.addEventListener('click', () => this.togglePause());
         this.clearBtn.addEventListener('click', () => this.clearScreen());
@@ -200,6 +216,10 @@ class MongoTV {
         }
     }
 
+    /**
+     * Toggles between Dark and Light themes.
+     * Persists preference to localStorage.
+     */
     toggleDarkMode() {
         this.isDarkMode = !this.isDarkMode;
         document.body.classList.toggle('light-mode', !this.isDarkMode);
@@ -207,6 +227,9 @@ class MongoTV {
         localStorage.setItem('darkMode', this.isDarkMode);
     }
 
+    /**
+     * Toggles visibility of error logs in the stream.
+     */
     toggleHideErrors() {
         this.hideErrors = !this.hideErrors;
         document.body.classList.toggle('hide-errors', this.hideErrors);
@@ -214,7 +237,10 @@ class MongoTV {
         localStorage.setItem('hideErrors', this.hideErrors);
     }
 
-    // Generate random harmonious colors
+    /**
+     * Generates and applies a random harmonious color palette.
+     * Uses HSL to ensure colors are vibrant and readable.
+     */
     randomizeColors() {
         const root = document.documentElement;
 
@@ -253,7 +279,9 @@ class MongoTV {
         console.log(`Colors randomized: primary=${primaryHue}°, secondary=${secondaryHue}°, tertiary=${tertiaryHue}°`);
     }
 
-    // Sidebar methods
+    /**
+     * Opens the navigation sidebar and fetches database list.
+     */
     openSidebar() {
         this.sidebar.classList.add('open');
         this.sidebarOverlay.classList.add('visible');
@@ -265,6 +293,9 @@ class MongoTV {
         this.sidebarOverlay.classList.remove('visible');
     }
 
+    /**
+     * Fetches list of databases from server API.
+     */
     async loadDatabases() {
         this.sidebarContent.innerHTML = '<div class="sidebar-loading">Loading databases...</div>';
 
@@ -328,6 +359,10 @@ class MongoTV {
         }
     }
 
+    /**
+     * Toggles expansion of a database item in the sidebar.
+     * @param {HTMLElement} dbItem - The database DOM element.
+     */
     async toggleDatabase(dbItem) {
         const isExpanded = dbItem.classList.contains('expanded');
 
@@ -344,6 +379,10 @@ class MongoTV {
         }
     }
 
+    /**
+     * Fetches collections for a specific database.
+     * @param {HTMLElement} dbItem - The database DOM element.
+     */
     async loadCollections(dbItem) {
         const dbName = dbItem.dataset.db;
         const collectionsContainer = dbItem.querySelector('.db-collections');
@@ -383,6 +422,10 @@ class MongoTV {
         }
     }
 
+    /**
+     * Selects a database and collection to watch.
+     * Sends the 'selectCollection' message to the server via WebSocket.
+     */
     selectCollection(database, collection) {
         // Clear the current stream
         this.clearScreen();
@@ -412,6 +455,10 @@ class MongoTV {
         this.closeSidebar();
     }
 
+    /**
+     * Establishes WebSocket connection to the server.
+     * Handles automatic reconnection on disconnect.
+     */
     connect() {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const wsUrl = `${protocol}//${window.location.host}`;
@@ -439,6 +486,10 @@ class MongoTV {
         };
     }
 
+    /**
+     * Routes incoming WebSocket messages to appropriate handlers.
+     * @param {Object} data - Parsed WebSocket message.
+     */
     handleMessage(data) {
         switch (data.type) {
             case 'welcome':
@@ -465,6 +516,10 @@ class MongoTV {
         }
     }
 
+    /**
+     * Displays a change event in the UI stream.
+     * Updates counters, history, and plays sound.
+     */
     displayChange(data) {
         // Remove welcome message on first document
         if (this.welcome) {
@@ -491,6 +546,11 @@ class MongoTV {
         }
     }
 
+    /**
+     * Renders a single document entry into the DOM.
+     * @param {Object} data - The change event data.
+     * @param {boolean} isHistory - Whether this is being rendered from history (disables animations).
+     */
     renderEntry(data, isHistory = false) {
         // Remove welcome if still there (e.g. loading history)
         if (this.welcome) {
@@ -539,11 +599,17 @@ class MongoTV {
         }
     }
 
+    /**
+     * Persists recent history to localStorage.
+     */
     saveHistory() {
         localStorage.setItem('mongoTV_history', JSON.stringify(this.history));
         localStorage.setItem('mongoTV_docCount', this.docCount);
     }
 
+    /**
+     * Loads history from localStorage.
+     */
     loadHistory() {
         const storedHistory = localStorage.getItem('mongoTV_history');
         const storedCount = localStorage.getItem('mongoTV_docCount');
@@ -565,6 +631,9 @@ class MongoTV {
         }
     }
 
+    /**
+     * Syntax highlights YAML content.
+     */
     highlightYaml(yaml) {
         if (!yaml) return '';
 
@@ -618,6 +687,10 @@ class MongoTV {
         this.statusText.textContent = text;
     }
 
+    /**
+     * Toggles pause/resume state of the stream.
+     * When paused, messages are queued up.
+     */
     togglePause() {
         this.isPaused = !this.isPaused;
 
@@ -635,6 +708,9 @@ class MongoTV {
         }
     }
 
+    /**
+     * Clears all documents from the screen and history.
+     */
     clearScreen() {
         // Keep only the structure
         this.screen.innerHTML = '';
@@ -659,6 +735,9 @@ class MongoTV {
         this.welcome = welcome;
     }
 
+    /**
+     * Toggles between YAML and JSON content format.
+     */
     toggleViewMode() {
         this.viewMode = this.viewMode === 'yaml' ? 'json' : 'yaml';
         document.body.dataset.viewMode = this.viewMode;
@@ -666,18 +745,19 @@ class MongoTV {
         localStorage.setItem('viewMode', this.viewMode);
     }
 
+    /**
+     * Toggles between Grid and List visualization layout.
+     */
     toggleLayoutMode() {
         this.layoutMode = this.layoutMode === 'grid' ? 'list' : 'grid';
         document.body.classList.toggle('layout-grid', this.layoutMode === 'grid');
-        // Button shows what clicking will switch TO? Or what current is?
-        // User request: "add option for someone to set grid or single column"
-        // Usually toggle buttons show current state or action.
-        // My previous logic: if grid, button says 'LIST' (action).
-        // Show CURRENT state on button (like View toggle)
         if (this.layoutToggleBtn) this.layoutToggleBtn.textContent = this.layoutMode === 'grid' ? 'GRID' : 'LIST';
         localStorage.setItem('layoutMode', this.layoutMode);
     }
 
+    /**
+     * Syntax highlighting for JSON content.
+     */
     highlightJson(json) {
         if (!json) return '';
         const str = JSON.stringify(json, null, 2);
@@ -706,6 +786,9 @@ class MongoTV {
         localStorage.setItem('docFontSize', this.fontSize);
     }
 
+    /**
+     * Opens the detail modal for a selected document.
+     */
     openModal(contentEl, data) {
         this.detailModal.classList.add('open');
         this.modalBody.innerHTML = '';
@@ -729,6 +812,9 @@ class MongoTV {
         }
     }
 
+    /**
+     * Plays a retro beep sound based on the operation type.
+     */
     playSound(operation) {
         if (!this.audioContext) return;
 
