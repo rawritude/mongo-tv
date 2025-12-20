@@ -1,6 +1,12 @@
 /* ============================================
    MONGO TV - Modern Quirky Stylesheet
-   ============================================ */
+   ============================================
+   Contains all visual styles including:
+   - CRT Scanline & Noise Effects
+   - Responsive Grid/List Layouts
+   - Dark/Light Mode Variables
+   - Syntax Highlighting for YAML/JSON
+*/
 
 /* CSS Variables - Modern Teal & Coral Theme */
 :root {
