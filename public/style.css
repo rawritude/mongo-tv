@@ -176,18 +176,18 @@ body::before {
   transition: all 0.3s ease;
 }
 
-.status-indicator.connected .status-dot {
-  background: var(--success);
-  box-shadow: 0 0 8px var(--success);
+#status.connected .status-dot {
+  background: var(--success) !important;
+  box-shadow: 0 0 8px var(--success) !important;
 }
 
-.status-indicator.disconnected .status-dot {
-  background: var(--error);
-  box-shadow: 0 0 8px var(--error);
+#status.disconnected .status-dot {
+  background: var(--error) !important;
+  box-shadow: 0 0 8px var(--error) !important;
 }
 
-.status-indicator.paused .status-dot {
-  background: var(--accent-secondary);
+#status.paused .status-dot {
+  background: var(--accent-secondary) !important;
   animation: none;
 }
 
