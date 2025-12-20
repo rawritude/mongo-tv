@@ -2,6 +2,10 @@
 
 Real-time MongoDB change stream viewer with a modern web interface.
 
+
+<img width="939" height="771" alt="image" src="https://github.com/user-attachments/assets/3ec0f04f-f80f-4f34-9d24-379a05b19efb" />
+
+
 ## Overview
 
 Mongo TV connects to your MongoDB replica set, listens for change stream events (inserts, updates, deletes), and broadcasts them in real-time to a connected web client via WebSockets. The interface provides a customizable, responsive experience with support for Grid/List layouts, JSON/YAML formatting, and document persistence.
