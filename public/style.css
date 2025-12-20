@@ -176,12 +176,12 @@ body::before {
   transition: all 0.3s ease;
 }
 
-body.connected .status-dot {
+.status-indicator.connected .status-dot {
   background: var(--success);
   box-shadow: 0 0 8px var(--success);
 }
 
-body.disconnected .status-dot {
+.status-indicator.disconnected .status-dot {
   background: var(--error);
   box-shadow: 0 0 8px var(--error);
 }
@@ -837,7 +837,7 @@ body.layout-grid .tv-screen {
 }
 
 
-}
+
 
 /* Footer Styles */
 .tv-footer {
