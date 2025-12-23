@@ -34,6 +34,7 @@ Mongo TV connects to your MongoDB replica set, listens for change stream events 
 *   **Flexible Layouts**: Toggle between a dense "List" stream or a visual "Grid" card view.
 *   **Data Formatting**: View payloads in clean YAML or raw JSON.
 *   **Persisted History**: Local storage saves recent logs and settings across reloads.
+*   **Performance Safe**: Automatically limits the logs to the most recent 100 items to prevent memory leaks.
 *   **Responsive Design**: Fully optimized for mobile, tablet, and desktop.
 *   **Customizable**: Configurable titles, filters, and defaults via environment variables.
 
