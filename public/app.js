@@ -101,9 +101,9 @@ class MongoTV {
         // Audio context for sound effects
         this.audioContext = null;
 
-        // History state (Last 50 items)
+        // History state (Last 100 items)
         this.history = [];
-        this.MAX_HISTORY = 50;
+        this.MAX_ITEMS = 100;
 
         // Initialize
         this.bindEvents();
@@ -533,12 +533,17 @@ class MongoTV {
 
         // Add to history
         this.history.push(data);
-        if (this.history.length > this.MAX_HISTORY) {
+        if (this.history.length > this.MAX_ITEMS) {
             this.history.shift();
         }
         this.saveHistory();
 
         this.renderEntry(data);
+
+        // Prune UI to match MAX_ITEMS
+        while (this.screen.children.length > this.MAX_ITEMS) {
+            this.screen.removeChild(this.screen.firstElementChild);
+        }
 
         // Play sound if enabled
         if (this.soundEnabled) {
